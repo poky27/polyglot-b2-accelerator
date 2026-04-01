@@ -1,0 +1,36 @@
+{
+  "name": "polyglot-b2-accelerator",
+  "version": "1.0.0",
+  "description": "Learn 4 languages to B2 level in 20 intensive days — FR, PT, DE, EN",
+  "private": true,
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
+  },
+  "keywords": [
+    "language-learning",
+    "polyglot",
+    "french",
+    "portuguese",
+    "german",
+    "english",
+    "B2",
+    "TOEFL",
+    "DELF",
+    "Goethe",
+    "CELPE-Bras",
+    "claude-ai",
+    "obsidian"
+  ],
+  "license": "MIT",
+  "browserslist": {
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+  }
+}
