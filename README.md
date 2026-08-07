@@ -100,7 +100,8 @@ claude --project docs/POLYGLOT-TUTOR-PROMPT.md
 
 Bot ligero en Node.js, inspirado en [Hermes Agent](https://github.com/nousresearch/hermes-agent) (memoria
 persistente, provider-agnostic), pensado para practicar por chat con comandos como `/practice`, `/vocab`,
-`/quiz`, `/correct` y `/roleplay`. Funciona con APIs LLM gratuitas (Groq, OpenRouter, etc.).
+`/quiz`, `/correct` y `/roleplay` — y por voz con `/voice join` (el bot te escucha y corrige pronunciación) y
+`/say` (el bot pronuncia en voz alta). Funciona con APIs LLM/TTS/STT gratuitas (Groq, OpenRouter, Edge TTS, etc.).
 
 ```bash
 cd discord-bot

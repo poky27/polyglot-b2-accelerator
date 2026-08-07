@@ -1,7 +1,10 @@
 import { LANGUAGE_CONFIG, buildSystemPrompt } from '../prompt.js';
 import { chat } from '../llm.js';
 import { getUserProgress, setLevel, recordActivity, summarizeForPrompt } from '../memory.js';
-import { startSession, endSession, getSession } from '../session.js';
+import { startSession, endSession, getSession, pushTurn } from '../session.js';
+import { synthesizeSpeech } from '../tts.js';
+import { transcribeAudio } from '../stt.js';
+import { joinAndListen, leave as leaveVoice, playAudioBuffer } from '../voice/manager.js';
 
 const WEAKPOINT_RE = /\[\[WEAKPOINT:\s*(.+?)\]\]\s*$/i;
 
@@ -145,6 +148,105 @@ export const handlers = {
     await setLevel(interaction.user.id, language, level);
     await interaction.reply({ content: `✅ Nivel de ${LANGUAGE_CONFIG[language].label} ajustado a **${level}**.`, ephemeral: true });
   },
+
+  async say(interaction) {
+    const language = interaction.options.getString('idioma');
+    const texto = interaction.options.getString('texto');
+    const cfg = LANGUAGE_CONFIG[language];
+    await interaction.deferReply();
+    try {
+      const mp3 = await synthesizeSpeech(texto, language);
+      await interaction.editReply({
+        content: `🔊 **${cfg.flag} ${cfg.label}:** "${texto}"`,
+        files: [{ attachment: mp3, name: 'pronunciacion.mp3' }],
+      });
+      if (interaction.guild) await playAudioBuffer(interaction.guild.id, mp3).catch(() => {});
+    } catch (err) {
+      await interaction.editReply(`⚠️ ${err.message}`);
+    }
+  },
+
+  async voice(interaction) {
+    const sub = interaction.options.getSubcommand();
+    if (sub === 'join') return handleVoiceJoin(interaction);
+    if (sub === 'leave') return handleVoiceLeave(interaction);
+  },
 };
+
+async function handleVoiceJoin(interaction) {
+  const language = interaction.options.getString('idioma');
+  const cfg = LANGUAGE_CONFIG[language];
+  const voiceChannel = interaction.member?.voice?.channel;
+
+  if (!voiceChannel) {
+    await interaction.reply({ content: '⚠️ Tienes que estar conectado a un canal de voz primero.', ephemeral: true });
+    return;
+  }
+
+  await interaction.deferReply();
+  try {
+    startSession(interaction.user.id, interaction.channelId, language);
+    await joinAndListen({
+      guild: interaction.guild,
+      voiceChannel,
+      userId: interaction.user.id,
+      onSpeechCaptured: (wavBuffer) => handleSpokenTurn({ interaction, wavBuffer, language }),
+      onError: (err) => interaction.channel.send(`⚠️ Error en la sesión de voz: ${err.message}`).catch(() => {}),
+    });
+    await interaction.editReply(
+      `🎙️ Conectado a **${voiceChannel.name}**, escuchándote en ${cfg.flag} ${cfg.label}. Habla cuando quieras — te responderé aquí en texto y en audio. Usa \`/voice leave\` para terminar.`
+    );
+  } catch (err) {
+    endSession(interaction.user.id, interaction.channelId);
+    await interaction.editReply(`⚠️ ${err.message}`);
+  }
+}
+
+async function handleVoiceLeave(interaction) {
+  const ok = interaction.guild ? leaveVoice(interaction.guild.id) : false;
+  await interaction.reply({
+    content: ok ? '👋 Salí del canal de voz.' : 'No estoy conectado a ningún canal de voz en este servidor.',
+    ephemeral: true,
+  });
+}
+
+async function handleSpokenTurn({ interaction, wavBuffer, language }) {
+  const channel = interaction.channel;
+  const userId = interaction.user.id;
+  try {
+    const transcript = await transcribeAudio(wavBuffer, language);
+    if (!transcript || transcript.trim().length < 2) return;
+
+    await channel.send(`🎙️ **Dijiste:** "${transcript}"`);
+    pushTurn(userId, channel.id, 'user', `[Mensaje hablado, transcrito automáticamente] ${transcript}`);
+
+    const progress = await getUserProgress(userId, language);
+    const system = buildSystemPrompt({
+      language,
+      userLevel: progress.level,
+      memorySummary: summarizeForPrompt(progress),
+      mode: 'voice',
+    });
+    const session = getSession(userId, channel.id);
+    const raw = await chat([{ role: 'system', content: system }, ...(session?.history || [])]);
+    const { clean, weakPoint } = stripWeakpoint(raw);
+    pushTurn(userId, channel.id, 'assistant', clean);
+    if (weakPoint) await recordActivity(userId, language, { weakPoint });
+    else await recordActivity(userId, language, {});
+
+    const mp3 = await synthesizeSpeech(clean, language).catch((err) => {
+      console.error('TTS error en turno hablado:', err);
+      return null;
+    });
+
+    const payload = { content: clean.slice(0, 1900) };
+    if (mp3) payload.files = [{ attachment: mp3, name: 'respuesta.mp3' }];
+    await channel.send(payload);
+
+    if (mp3 && interaction.guild) await playAudioBuffer(interaction.guild.id, mp3).catch(() => {});
+  } catch (err) {
+    await channel.send(`⚠️ ${err.message}`).catch(() => {});
+  }
+}
 
 export { replyFromTutor, stripWeakpoint };

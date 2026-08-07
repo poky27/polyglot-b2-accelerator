@@ -29,7 +29,7 @@ const LANGUAGE_CONFIG = {
   },
 };
 
-function buildSystemPrompt({ language, userLevel = null, memorySummary = '' }) {
+function buildSystemPrompt({ language, userLevel = null, memorySummary = '', mode = 'text' }) {
   const cfg = LANGUAGE_CONFIG[language];
   if (!cfg) throw new Error(`Unsupported language: ${language}`);
 
@@ -68,7 +68,14 @@ Exámenes de referencia para medir progreso: ${cfg.exams}.
 7. Mantente SIEMPRE dentro de ${cfg.label}. Si el usuario cambia de idioma, recuérdale amablemente que esta sesión es de ${cfg.label} y sugiere el comando del otro idioma.
 8. Cuando expliques en español, usa español real y natural — NUNCA calcos ni palabras inventadas por similitud con el inglés (ejemplo de error a evitar: "polido" para decir "polite"; la palabra correcta es "educado" o "cortés"). Si dudas de una palabra en español, usa una más simple pero correcta en vez de arriesgarte a un calco.
 
-## ETIQUETADO PARA MEMORIA (uso interno, no lo expliques al usuario)
+${
+    mode === 'voice'
+      ? `## MODO VOZ
+Este turno viene de un mensaje HABLADO, transcrito automáticamente por reconocimiento de voz (puede tener errores). Si la transcripción tiene palabras raras, cortadas o que no encajan gramaticalmente, considera que puede deberse a PRONUNCIACIÓN poco clara — no solo a un error gramatical — y coméntalo brevemente si aplica (ej: "sonó como si tragaras el final de la palabra", "la vocal sonó más cerrada de lo normal"), pero sin ser categórico porque el reconocimiento de voz no es 100% fiable. Da feedback de pronunciación ADEMÁS del feedback gramatical habitual, no en vez de él.
+
+`
+      : ''
+  }## ETIQUETADO PARA MEMORIA (uso interno, no lo expliques al usuario)
 Si detectas un error recurrente o un vacío importante que vale la pena recordar para próximas sesiones, añade al FINAL de tu respuesta, en su propia línea, exactamente: [[WEAKPOINT: descripción corta en 3-6 palabras]]. Omite esta línea si no hay nada relevante que registrar. El usuario nunca verá esta línea (se elimina antes de mostrarse).
 
 ## MEMORIA DEL USUARIO (progreso persistente)

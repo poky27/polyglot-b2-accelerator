@@ -29,6 +29,18 @@ export const commands = [
       .setName('roleplay')
       .setDescription('Simula un escenario real (pedir café, entrevista, etc.) para practicar producción oral/escrita')
   ).addStringOption((opt) => opt.setName('escenario').setDescription('Ej: "pedir un café", "entrevista de trabajo"').setRequired(false)),
+  languageOption(
+    new SlashCommandBuilder()
+      .setName('say')
+      .setDescription('El bot pronuncia un texto en voz alta (audio) para que entrenes el oído')
+  ).addStringOption((opt) => opt.setName('texto').setDescription('Texto a pronunciar').setRequired(true)),
+  new SlashCommandBuilder()
+    .setName('voice')
+    .setDescription('Practica de voz: el bot se une a tu canal y te escucha')
+    .addSubcommand((sub) =>
+      languageOption(sub.setName('join').setDescription('Une el bot a tu canal de voz actual y empieza a escucharte'))
+    )
+    .addSubcommand((sub) => sub.setName('leave').setDescription('El bot sale del canal de voz')),
   new SlashCommandBuilder().setName('progress').setDescription('Muestra tu progreso guardado en ambos idiomas'),
   languageOption(
     new SlashCommandBuilder()

@@ -17,6 +17,9 @@ del framework Python completo, para encajar con el stack de este repo y no reque
 - `/quiz idioma:` — mini-quiz de 5 preguntas a tu nivel
 - `/correct idioma: texto:` — corrige una frase tuya citando la regla (Cambridge/British Council para inglés, Duden/Goethe-Institut para alemán)
 - `/roleplay idioma: escenario:` — simulacro conversacional (pedir un café, entrevista, etc.)
+- `/say idioma: texto:` — el bot pronuncia un texto en voz (audio adjunto, y lo reproduce en tu canal de voz si estás en uno)
+- `/voice join idioma:` — el bot se une a tu canal de voz actual y te escucha: transcribe lo que dices, te da feedback de gramática **y pronunciación**, y te responde en texto + audio
+- `/voice leave` — el bot sale del canal de voz
 - `/progress` — tu nivel, racha, vocabulario y puntos débiles guardados
 - `/setlevel idioma: nivel:` — ajusta tu nivel de partida manualmente
 
@@ -29,7 +32,9 @@ El progreso (nivel, racha, vocabulario visto, quizzes hechos, errores recurrente
 2. **Bot** → *Reset Token* → copia el token → será tu `DISCORD_TOKEN`
 3. En **Bot**, activa el intent privilegiado **MESSAGE CONTENT INTENT** (necesario para que el bot lea tus mensajes durante una sesión de práctica)
 4. Copia el **Application ID** (pestaña *General Information*) → será tu `DISCORD_CLIENT_ID`
-5. **OAuth2 → URL Generator**: marca scopes `bot` + `applications.commands`, permisos `Send Messages`, `Read Message History`, `Use Slash Commands`. Abre la URL generada para invitar el bot a tu servidor.
+5. **OAuth2 → URL Generator**: marca scopes `bot` + `applications.commands`, permisos `Send Messages`, `Read Message History`, `Use Slash Commands`, `Attach Files` (para los audios), y `Connect` + `Speak` (para `/voice`). Abre la URL generada para invitar el bot a tu servidor.
+
+> Si ya invitaste el bot antes de agregar `Connect`/`Speak`/`Attach Files`, vuelve a generar la URL con esos permisos marcados y vuelve a abrirla — reautoriza sin necesidad de expulsar al bot primero.
 
 ## 2. Elegir una API LLM gratuita
 
@@ -43,6 +48,15 @@ El bot habla con cualquier endpoint compatible con `POST /chat/completions` de O
 | **Google Gemini** | `https://generativelanguage.googleapis.com/v1beta/openai` | No disponible en UE/UK/Suiza |
 | **Mistral** | `https://api.mistral.ai/v1` | Plan "Experiment" gratuito |
 | **SambaNova** | `https://api.sambanova.ai/v1` | Sin tarjeta |
+
+### Voz (opcional, para `/voice` y `/say`)
+
+- **Escuchar (STT)**: usa el Whisper gratuito de **Groq** (`api.groq.com`) específicamente, sin importar qué
+  proveedor uses para el texto — no todos los proveedores gratuitos de la tabla anterior ofrecen transcripción
+  de audio. Si ya elegiste Groq arriba, no necesitas una key nueva.
+- **Hablar (TTS)**: usa el servicio "Read Aloud" de Microsoft Edge — gratis, sin API key, sin registro. Si
+  alguna vez te da error 403, es porque Microsoft a veces bloquea IPs de datacenters/VPN; desde una conexión
+  doméstica normal funciona.
 
 ## 3. Configurar variables de entorno
 
@@ -74,6 +88,13 @@ Para desarrollo con auto-reload: `npm run dev`.
   cobertura, añade una entrada nueva a `LANGUAGE_CONFIG` en `src/prompt.js`.
 - Para producción considera migrar `data/progress.json` a SQLite/Postgres si vas a tener muchos usuarios
   concurrentes (el archivo JSON no es seguro ante escrituras concurrentes a gran escala).
+- **Voz**: `/voice join` solo escucha al usuario que lo invocó (no a todo el canal). Detecta cuando dejas de
+  hablar (~1s de silencio) para cortar y procesar la grabación — habla en frases, no dejes silencios largos
+  a mitad de una idea o se cortará antes de tiempo. Solo se admite una sesión de voz activa por servidor a
+  la vez.
+- Las librerías de voz (`@discordjs/voice`, `opusscript`, `libsodium-wrappers`, `ffmpeg-static`) se eligieron
+  deliberadamente en sus variantes sin compilación nativa (JS puro / binario precompilado) para que
+  `npm install` funcione en Windows sin Visual Studio Build Tools.
 
 ## Despliegue
 
