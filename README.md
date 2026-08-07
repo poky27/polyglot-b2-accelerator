@@ -17,6 +17,7 @@ Un sistema completo de aprendizaje de idiomas que combina:
 - **App interactiva React** con dashboard, juegos, quizzes y noticias
 - **Vault de Obsidian** pre-estructurado para organizar tu progreso
 - **Exportación a Anki** para repetición espaciada
+- **Bot de Discord** ([`discord-bot/`](discord-bot/)) enfocado en 🇬🇧 English (A2→B1) y 🇩🇪 Deutsch (A2), con memoria de progreso persistente y APIs LLM gratuitas
 
 ## 📂 Estructura del proyecto
 
@@ -94,6 +95,22 @@ npm start
 ```bash
 claude --project docs/POLYGLOT-TUTOR-PROMPT.md
 ```
+
+### Opción 5: Bot de Discord (Inglés A2→B1 · Alemán A2)
+
+Bot ligero en Node.js, inspirado en [Hermes Agent](https://github.com/nousresearch/hermes-agent) (memoria
+persistente, provider-agnostic), pensado para practicar por chat con comandos como `/practice`, `/vocab`,
+`/quiz`, `/correct` y `/roleplay`. Funciona con APIs LLM gratuitas (Groq, OpenRouter, etc.).
+
+```bash
+cd discord-bot
+cp .env.example .env   # agrega tu DISCORD_TOKEN y LLM_API_KEY
+npm install
+npm run register
+npm start
+```
+
+Ver [`discord-bot/README.md`](discord-bot/README.md) para la guía completa de setup.
 
 ## 🏗️ Metodología
 
