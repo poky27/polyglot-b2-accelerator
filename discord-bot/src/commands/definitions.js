@@ -28,8 +28,7 @@ export const commands = [
     new SlashCommandBuilder()
       .setName('roleplay')
       .setDescription('Simula un escenario real (pedir café, entrevista, etc.) para practicar producción oral/escrita')
-      .addStringOption((opt) => opt.setName('escenario').setDescription('Ej: "pedir un café", "entrevista de trabajo"').setRequired(false))
-  ),
+  ).addStringOption((opt) => opt.setName('escenario').setDescription('Ej: "pedir un café", "entrevista de trabajo"').setRequired(false)),
   new SlashCommandBuilder().setName('progress').setDescription('Muestra tu progreso guardado en ambos idiomas'),
   languageOption(
     new SlashCommandBuilder()
