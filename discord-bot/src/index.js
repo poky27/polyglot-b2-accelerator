@@ -17,7 +17,7 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log(`Hermes language tutor bot conectado como ${client.user.tag}`);
 });
 
