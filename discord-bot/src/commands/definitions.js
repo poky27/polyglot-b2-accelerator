@@ -42,6 +42,9 @@ export const commands = [
     )
     .addSubcommand((sub) => sub.setName('leave').setDescription('El bot sale del canal de voz')),
   new SlashCommandBuilder().setName('progress').setDescription('Muestra tu progreso guardado en ambos idiomas'),
+  new SlashCommandBuilder()
+    .setName('export')
+    .setDescription('Descarga tu progreso en Markdown, listo para pegar en tu vault de Obsidian'),
   languageOption(
     new SlashCommandBuilder()
       .setName('setlevel')

@@ -1,6 +1,6 @@
 import { buildSystemPrompt } from './prompt.js';
 import { chat } from './llm.js';
-import { getUserProgress, recordActivity, summarizeForPrompt } from './memory.js';
+import { getUserProgress, recordActivity, recordPracticeTime, summarizeForPrompt } from './memory.js';
 import { startSession, getSession, pushTurn } from './session.js';
 
 const WEAKPOINT_RE = /\[\[WEAKPOINT:\s*(.+?)\]\]\s*$/i;
@@ -23,6 +23,7 @@ async function tutorTurn({ userId, channelId, language, userText, mode = 'text' 
   }
 
   pushTurn(userId, channelId, 'user', userText);
+  await recordPracticeTime(userId, language);
 
   const progress = await getUserProgress(userId, language);
   const system = buildSystemPrompt({

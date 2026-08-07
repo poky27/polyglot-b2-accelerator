@@ -1,5 +1,6 @@
 import { LANGUAGE_CONFIG } from '../prompt.js';
-import { getUserProgress, setLevel, recordActivity } from '../memory.js';
+import { getUserProgress, setLevel, recordActivity, formatDuration } from '../memory.js';
+import { buildObsidianExport } from '../export.js';
 import { startSession, endSession } from '../session.js';
 import { tutorTurn } from '../tutor.js';
 import { synthesizeSpeech } from '../tts.js';
@@ -117,10 +118,22 @@ export const handlers = {
     const en = await getUserProgress(interaction.user.id, 'english');
     const de = await getUserProgress(interaction.user.id, 'german');
     const fmt = (label, flag, p) =>
-      `${flag} **${label}** — Nivel: ${p.level} · Racha: ${p.streak}d · Vocab: ${p.vocabLearned} · Quizzes: ${p.quizzesCompleted}` +
+      `${flag} **${label}** — Nivel: ${p.level} · Racha: ${p.streak}d · Hoy: ${formatDuration(p.todaySeconds)} · Total: ${formatDuration(p.totalSeconds)} · Vocab: ${p.vocabLearned} · Quizzes: ${p.quizzesCompleted}` +
       (p.weakPoints.length ? `\n   Puntos débiles: ${p.weakPoints.slice(0, 3).join(', ')}` : '');
     await interaction.reply({
-      content: `**Tu progreso**\n\n${fmt('English', '🇬🇧', en)}\n${fmt('Deutsch', '🇩🇪', de)}`,
+      content: `**Tu progreso**\n\n${fmt('English', '🇬🇧', en)}\n${fmt('Deutsch', '🇩🇪', de)}\n\n_Usa \`/export\` para bajar esto en formato Markdown para tu vault de Obsidian._`,
+      ephemeral: true,
+    });
+  },
+
+  async export(interaction) {
+    const en = await getUserProgress(interaction.user.id, 'english');
+    const de = await getUserProgress(interaction.user.id, 'german');
+    const markdown = buildObsidianExport({ english: en, german: de });
+    const today = new Date().toISOString().slice(0, 10);
+    await interaction.reply({
+      content: `📤 Aquí está tu progreso en Markdown. Guárdalo en tu vault (por ejemplo, como \`Transversal/Progreso-Discord.md\` o pega el contenido dentro de tu \`Tracker.md\` existente).`,
+      files: [{ attachment: Buffer.from(markdown, 'utf-8'), name: `progreso-discord-${today}.md` }],
       ephemeral: true,
     });
   },

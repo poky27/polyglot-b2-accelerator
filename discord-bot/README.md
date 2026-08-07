@@ -20,11 +20,22 @@ del framework Python completo, para encajar con el stack de este repo y no reque
 - `/say idioma: texto:` — el bot pronuncia un texto en voz (audio adjunto, y lo reproduce en tu canal de voz si estás en uno)
 - `/voice join idioma:` — el bot se une a tu canal de voz actual y te escucha: transcribe lo que dices, te da feedback de gramática **y pronunciación**, y te responde en texto + audio
 - `/voice leave` — el bot sale del canal de voz
-- `/progress` — tu nivel, racha, vocabulario y puntos débiles guardados
+- `/progress` — tu nivel, racha, **tiempo practicado hoy y total**, vocabulario y puntos débiles guardados
+- `/export` — descarga tu progreso en Markdown, listo para pegar en tu vault de Obsidian
 - `/setlevel idioma: nivel:` — ajusta tu nivel de partida manualmente
 
-El progreso (nivel, racha, vocabulario visto, quizzes hechos, errores recurrentes) se guarda por usuario en
-`data/progress.json` y se inyecta en cada respuesta del tutor para que no repita explicaciones ya dominadas.
+El progreso (nivel, racha, tiempo practicado, vocabulario visto, quizzes hechos, errores recurrentes) se
+guarda por usuario en `data/progress.json` y se inyecta en cada respuesta del tutor para que no repita
+explicaciones ya dominadas.
+
+**Tiempo practicado**: se acumula automáticamente en cada interacción (mensaje, comando, turno de voz). Si
+pasan más de 5 minutos entre una interacción y la siguiente, ese hueco no cuenta como práctica (se asume que
+te fuiste). No hace falta ningún comando para "iniciar" el timer.
+
+**Exportar a Obsidian**: `/export` genera un archivo `.md` con el mismo estilo que
+`obsidian-vault/Plan/Tracker.md` (nivel, racha, tiempo, vocabulario, errores recurrentes por idioma).
+Bájalo desde Discord y pégalo en tu vault — como el bot corre en un servidor aparte, no hay forma de que
+escriba directo en tu Obsidian local, así que este es el paso manual de "traer" los datos.
 
 ## 1. Crear la app de Discord
 

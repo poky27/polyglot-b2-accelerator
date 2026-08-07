@@ -6,13 +6,28 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'progress.json');
 
+// Gaps longer than this between two interactions aren't counted as practice
+// time (you stepped away, you weren't "practicing" during that gap).
+const SESSION_GAP_MS = 5 * 60 * 1000;
+
 let cache = null;
 
-function defaultUser() {
+function defaultLanguageEntry() {
   return {
-    english: { level: 'A2', vocabLearned: 0, quizzesCompleted: 0, streak: 0, lastActive: null, weakPoints: [] },
-    german: { level: 'A2', vocabLearned: 0, quizzesCompleted: 0, streak: 0, lastActive: null, weakPoints: [] },
+    level: 'A2',
+    vocabLearned: 0,
+    quizzesCompleted: 0,
+    streak: 0,
+    lastActive: null,
+    weakPoints: [],
+    todaySeconds: 0,
+    totalSeconds: 0,
+    lastActivityAt: null,
   };
+}
+
+function defaultUser() {
+  return { english: defaultLanguageEntry(), german: defaultLanguageEntry() };
 }
 
 async function load() {
@@ -35,7 +50,9 @@ async function persist() {
 export async function getUserProgress(userId, language) {
   const db = await load();
   if (!db[userId]) db[userId] = defaultUser();
-  if (!db[userId][language]) db[userId][language] = defaultUser()[language];
+  // Merge in defaults so entries saved before newer fields existed (e.g.
+  // time tracking) don't end up with missing/undefined values.
+  db[userId][language] = { ...defaultLanguageEntry(), ...(db[userId][language] || {}) };
   return db[userId][language];
 }
 
@@ -69,6 +86,39 @@ export async function recordActivity(userId, language, { vocabDelta = 0, quizDel
 
   await persist();
   return entry;
+}
+
+// Called once per interaction (start of a tutor turn). Accumulates elapsed
+// wall-clock time since the previous interaction, as long as the gap is
+// short enough to count as "still practicing" rather than "came back later".
+export async function recordPracticeTime(userId, language) {
+  const db = await load();
+  if (!db[userId]) db[userId] = defaultUser();
+  if (!db[userId][language]) db[userId][language] = defaultLanguageEntry();
+  const entry = db[userId][language];
+
+  const now = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  if (entry.lastActive !== today) {
+    entry.todaySeconds = 0;
+  }
+
+  if (entry.lastActivityAt && now - entry.lastActivityAt <= SESSION_GAP_MS) {
+    const elapsedSec = (now - entry.lastActivityAt) / 1000;
+    entry.todaySeconds = (entry.todaySeconds || 0) + elapsedSec;
+    entry.totalSeconds = (entry.totalSeconds || 0) + elapsedSec;
+  }
+  entry.lastActivityAt = now;
+
+  await persist();
+}
+
+export function formatDuration(totalSeconds) {
+  const totalMin = Math.round((totalSeconds || 0) / 60);
+  if (totalMin < 60) return `${totalMin}m`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h}h ${m}m`;
 }
 
 export function summarizeForPrompt(entry) {
