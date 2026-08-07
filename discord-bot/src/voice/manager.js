@@ -1,15 +1,24 @@
-import {
-  joinVoiceChannel,
-  VoiceConnectionStatus,
-  entersState,
-  EndBehaviorType,
-  createAudioPlayer,
-  createAudioResource,
-  StreamType,
-} from '@discordjs/voice';
-import prism from 'prism-media';
 import { Readable } from 'node:stream';
 import { pcmToWav } from './wav.js';
+
+// @discordjs/voice, prism-media, opusscript, libsodium-wrappers and
+// ffmpeg-static are all optionalDependencies (they can fail to install on
+// disk-constrained free hosts). Loading them lazily means the rest of the
+// bot still boots and works even when they're missing — only /voice fails,
+// with a clear message, instead of the whole process crashing at startup.
+let voiceLib = null;
+async function loadVoiceLib() {
+  if (voiceLib) return voiceLib;
+  try {
+    const [voice, prismMod] = await Promise.all([import('@discordjs/voice'), import('prism-media')]);
+    voiceLib = { ...voice, prism: prismMod.default ?? prismMod };
+    return voiceLib;
+  } catch (err) {
+    throw new Error(
+      'Las librerías de voz (@discordjs/voice / prism-media / opusscript) no están instaladas en este servidor — /voice no está disponible aquí.'
+    );
+  }
+}
 
 // One active listening session per guild. Deliberately simple (Map, no
 // persistence) — voice sessions are inherently ephemeral/live, unlike the
@@ -26,6 +35,8 @@ export async function joinAndListen({ guild, voiceChannel, userId, onSpeechCaptu
   if (activeSessions.has(guild.id)) {
     throw new Error('Ya hay una sesión de voz activa en este servidor. Usa /voice leave primero.');
   }
+
+  const { joinVoiceChannel, VoiceConnectionStatus, entersState, EndBehaviorType, createAudioPlayer, prism } = await loadVoiceLib();
 
   const connection = joinVoiceChannel({
     channelId: voiceChannel.id,
@@ -94,6 +105,7 @@ export function leave(guildId) {
 export async function playAudioBuffer(guildId, mp3Buffer) {
   const state = activeSessions.get(guildId);
   if (!state) return false;
+  const { createAudioResource, StreamType } = await loadVoiceLib();
   const resource = createAudioResource(Readable.from(mp3Buffer), { inputType: StreamType.Arbitrary });
   state.player.play(resource);
   return true;
