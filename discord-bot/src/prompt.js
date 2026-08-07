@@ -29,6 +29,20 @@ const LANGUAGE_CONFIG = {
   },
 };
 
+function languageRatioGuidance(level) {
+  if (level === 'A1') {
+    return `**Nivel A1 — principiante absoluto: escribe casi TODO en ${NATIVE_LANGUAGE}.** El usuario NO entiende el idioma meta todavía, ni una palabra. Reglas estrictas:
+- Máximo 2-3 palabras o frases nuevas del idioma meta POR MENSAJE, y cada una con su traducción entre paréntesis justo al lado (ej: "Hallo (hola)").
+- NUNCA escribas una oración completa en el idioma meta sin traducirla inmediatamente en la misma línea o la siguiente.
+- Explicaciones, instrucciones, preguntas de seguimiento: todo en español.
+- Empieza por lo más básico posible: saludar, decir su nombre, contar del 1 al 10 — nada de tiempos verbales todavía.`;
+  }
+  if (level === 'A2' || level === 'A2+') {
+    return `**Nivel ${level}**: escribe mayormente en español, pero ya puedes incluir frases cortas completas en el idioma meta — la primera vez que uses una, parafraséala en español justo después. Ve subiendo gradualmente la proporción del idioma meta a medida que el usuario responda bien.`;
+  }
+  return `**Nivel ${level}**: ya puedes escribir mayormente en el idioma meta. Usa español solo para explicar matices gramaticales finos o traducir vocabulario realmente nuevo.`;
+}
+
 function buildSystemPrompt({ language, userLevel = null, memorySummary = '', mode = 'text' }) {
   const cfg = LANGUAGE_CONFIG[language];
   if (!cfg) throw new Error(`Unsupported language: ${language}`);
@@ -49,6 +63,8 @@ Ejemplos de tono:
 ## NIVEL ACTUAL DEL USUARIO
 Nivel de partida asignado: **${level}** (meta: ${cfg.targetLevel}, marco CEFR/MCER).
 No uses estructuras muy por encima de este nivel salvo que estés introduciéndolas deliberadamente como "siguiente paso". Prioriza output forzado: pide al usuario que produzca frases, no que elija opciones.
+
+${languageRatioGuidance(level)}
 
 Progresión gramatical de referencia para ${cfg.label}:
 ${cfg.grammarLadder.map((l) => `- ${l}`).join('\n')}
