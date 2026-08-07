@@ -21,10 +21,25 @@ const LANGUAGE_CONFIG = {
     targetLevel: 'A2',
     authorities: 'Goethe-Institut, Duden, Rat für deutsche Rechtschreibung',
     exams: 'Goethe-Zertifikat A2, ÖSD A2',
+    // Progresión alineada al Rahmencurriculum público del Goethe-Institut para Start Deutsch 1 (A1) y Goethe-Zertifikat A2.
     grammarLadder: [
-      'A1 recap (only if needed): Personalpronomen, sein/haben, Präsens regelmäßiger Verben, Artikel (der/die/das), Zahlen',
-      'A2 core: Perfekt (haben/sein + Partizip II), Modalverben (können, müssen, wollen, dürfen), Wechselpräpositionen (Akkusativ/Dativ), Satzklammer / Verb-Zweit',
-      'A2 consolidation: Komparativ/Superlativ, Nebensätze mit "weil"/"dass", trennbare Verben, Uhrzeit & Alltag',
+      'A1 (Start Deutsch 1): Personalpronomen, Verben im Präsens (regelmäßig + sein/haben/können/möchten), bestimmter/unbestimmter Artikel (der/die/das, ein/eine), Possessivartikel, Plural der Nomen, Negation (nicht/kein), W-Fragen y Ja/Nein-Fragen, Imperativ (Sie-Form), Präpositionen básicas (in, auf, aus, nach, bei, mit, zu), Akkusativ básico, Zahlen y Uhrzeit',
+      'A1->A2 bridge: Modalverben completos (dürfen, können, müssen, sollen, wollen, mögen), Präteritum de sein/haben/modales, primeras Wechselpräpositionen (Akkusativ/Dativ)',
+      'A2 (Goethe-Zertifikat A2): Perfekt (haben/sein + Partizip II), Dativ completo, Wechselpräpositionen, Komparativ/Superlativ, Nebensätze mit weil/dass/wenn, trennbare Verben, Verben reflexivos básicos, Satzklammer / Verb-Zweit',
+    ],
+    // Themenbereiche (áreas temáticas) del marco público del Goethe-Institut — úsalas para elegir vocabulario y escenarios de roleplay realistas y alineados al examen.
+    topicAreas: [
+      'Persönliche Angaben (nombre, edad, nacionalidad, dirección)',
+      'Wohnen (vivienda)',
+      'Reisen und Verkehr (viajes y transporte)',
+      'Verpflegung (comida y bebida)',
+      'Einkaufen (compras)',
+      'Körper und Gesundheit (cuerpo y salud)',
+      'Ausbildung, Schule, Beruf (educación y trabajo)',
+      'Freizeit und Unterhaltung (tiempo libre)',
+      'Kontakte mit Mitmenschen (relaciones sociales, saludos, invitaciones)',
+      'Orientierung am Ort (orientación, direcciones)',
+      'Öffentliche und private Dienstleistungen (servicios, oficinas, correo, banco)',
     ],
   },
 };
@@ -68,7 +83,11 @@ ${languageRatioGuidance(level)}
 
 Progresión gramatical de referencia para ${cfg.label}:
 ${cfg.grammarLadder.map((l) => `- ${l}`).join('\n')}
-
+${
+    cfg.topicAreas
+      ? `\nÁreas temáticas de referencia (úsalas para elegir vocabulario y escenarios de roleplay realistas, alineados al examen):\n${cfg.topicAreas.map((t) => `- ${t}`).join('\n')}\n`
+      : ''
+  }
 ## AUTORIDADES LINGÜÍSTICAS
 Cuando corrijas gramática u ortografía, basa la corrección en: ${cfg.authorities}. No inventes reglas. Si no estás seguro de una regla exacta, dilo en vez de inventar.
 
