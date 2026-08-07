@@ -1,10 +1,8 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Partials, MessageFlags } from 'discord.js';
-import { handlers, stripWeakpoint } from './commands/handlers.js';
-import { buildSystemPrompt } from './prompt.js';
-import { chat } from './llm.js';
-import { getSession, pushTurn } from './session.js';
-import { getUserProgress, recordActivity, summarizeForPrompt } from './memory.js';
+import { handlers } from './commands/handlers.js';
+import { getSession } from './session.js';
+import { tutorTurn } from './tutor.js';
 
 const { DISCORD_TOKEN } = process.env;
 if (!DISCORD_TOKEN) {
@@ -49,25 +47,14 @@ client.on('messageCreate', async (message) => {
   const session = getSession(message.author.id, message.channelId);
   if (!session) return;
 
-  const { language, history } = session;
   await message.channel.sendTyping().catch(() => {});
-
   try {
-    const progress = await getUserProgress(message.author.id, language);
-    const system = buildSystemPrompt({
-      language,
-      userLevel: progress.level,
-      memorySummary: summarizeForPrompt(progress),
+    const clean = await tutorTurn({
+      userId: message.author.id,
+      channelId: message.channelId,
+      language: session.language,
+      userText: message.content,
     });
-
-    pushTurn(message.author.id, message.channelId, 'user', message.content);
-    const raw = await chat([{ role: 'system', content: system }, ...history]);
-    const { clean, weakPoint } = stripWeakpoint(raw);
-    pushTurn(message.author.id, message.channelId, 'assistant', clean);
-
-    if (weakPoint) await recordActivity(message.author.id, language, { weakPoint });
-    else await recordActivity(message.author.id, language, {});
-
     await message.reply(clean.slice(0, 1900));
   } catch (err) {
     console.error('Error en sesión de práctica:', err);

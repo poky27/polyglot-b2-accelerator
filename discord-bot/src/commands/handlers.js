@@ -1,34 +1,10 @@
-import { LANGUAGE_CONFIG, buildSystemPrompt } from '../prompt.js';
-import { chat } from '../llm.js';
-import { getUserProgress, setLevel, recordActivity, summarizeForPrompt } from '../memory.js';
-import { startSession, endSession, getSession, pushTurn } from '../session.js';
+import { LANGUAGE_CONFIG } from '../prompt.js';
+import { getUserProgress, setLevel, recordActivity } from '../memory.js';
+import { startSession, endSession } from '../session.js';
+import { tutorTurn } from '../tutor.js';
 import { synthesizeSpeech } from '../tts.js';
 import { transcribeAudio } from '../stt.js';
 import { joinAndListen, leave as leaveVoice, playAudioBuffer } from '../voice/manager.js';
-
-const WEAKPOINT_RE = /\[\[WEAKPOINT:\s*(.+?)\]\]\s*$/i;
-
-function stripWeakpoint(text) {
-  const match = text.match(WEAKPOINT_RE);
-  if (!match) return { clean: text.trim(), weakPoint: null };
-  return { clean: text.replace(WEAKPOINT_RE, '').trim(), weakPoint: match[1].trim() };
-}
-
-async function replyFromTutor(interaction, language, userMessage) {
-  const progress = await getUserProgress(interaction.user.id, language);
-  const system = buildSystemPrompt({
-    language,
-    userLevel: progress.level,
-    memorySummary: summarizeForPrompt(progress),
-  });
-  const raw = await chat([
-    { role: 'system', content: system },
-    { role: 'user', content: userMessage },
-  ]);
-  const { clean, weakPoint } = stripWeakpoint(raw);
-  if (weakPoint) await recordActivity(interaction.user.id, language, { weakPoint });
-  return clean;
-}
 
 export const handlers = {
   async practice(interaction) {
@@ -37,11 +13,12 @@ export const handlers = {
     startSession(interaction.user.id, interaction.channelId, language);
     await interaction.deferReply();
     try {
-      const intro = await replyFromTutor(
-        interaction,
+      const intro = await tutorTurn({
+        userId: interaction.user.id,
+        channelId: interaction.channelId,
         language,
-        `Empieza una sesión de práctica de ${cfg.label}. Saluda brevemente, recuerda mi nivel actual y lánzame una primera micro-tarea o pregunta para que produzca lenguaje ya mismo.`
-      );
+        userText: `Empieza una sesión de práctica de ${cfg.label}. Saluda brevemente, recuerda mi nivel actual y lánzame una primera micro-tarea o pregunta para que produzca lenguaje ya mismo.`,
+      });
       await interaction.editReply(
         `**Sesión de ${cfg.flag} ${cfg.label} iniciada.** Escribe en este canal y te responderé como tutor. Usa \`/stop\` para terminar.\n\n${intro}`
       );
@@ -61,13 +38,16 @@ export const handlers = {
     const cfg = LANGUAGE_CONFIG[language];
     await interaction.deferReply();
     try {
-      const text = await replyFromTutor(
-        interaction,
+      const text = await tutorTurn({
+        userId: interaction.user.id,
+        channelId: interaction.channelId,
         language,
-        `Dame exactamente 5 palabras o "chunks" NUEVOS de vocabulario de ${cfg.label} apropiados para mi nivel actual, cada uno con: la palabra, una frase de ejemplo corta, y su traducción/explicación en español. Formato de lista numerada.`
-      );
+        userText: `Dame exactamente 5 palabras o "chunks" NUEVOS de vocabulario de ${cfg.label} apropiados para mi nivel actual, cada uno con: la palabra, una frase de ejemplo corta, y su traducción/explicación en español. Formato de lista numerada.`,
+      });
       await recordActivity(interaction.user.id, language, { vocabDelta: 5 });
-      await interaction.editReply(`**Vocabulario nuevo — ${cfg.flag} ${cfg.label}**\n\n${text}`);
+      await interaction.editReply(
+        `**Vocabulario nuevo — ${cfg.flag} ${cfg.label}**\n\n${text}\n\n_Puedes seguir escribiendo en este canal y seguimos la conversación._`
+      );
     } catch (err) {
       await interaction.editReply(`⚠️ ${err.message}`);
     }
@@ -78,14 +58,15 @@ export const handlers = {
     const cfg = LANGUAGE_CONFIG[language];
     await interaction.deferReply();
     try {
-      const text = await replyFromTutor(
-        interaction,
+      const text = await tutorTurn({
+        userId: interaction.user.id,
+        channelId: interaction.channelId,
         language,
-        `Genera un mini-quiz de 5 preguntas de ${cfg.label} a mi nivel actual (mezcla gramática y vocabulario). Numera las preguntas. NO des las respuestas todavía — las corregirás cuando yo responda en el chat.`
-      );
+        userText: `Genera un mini-quiz de 5 preguntas de ${cfg.label} a mi nivel actual (mezcla gramática y vocabulario). Numera las preguntas. NO des las respuestas todavía — las corregirás cuando yo responda en el chat.`,
+      });
       await recordActivity(interaction.user.id, language, { quizDelta: 1 });
       await interaction.editReply(
-        `**Quiz — ${cfg.flag} ${cfg.label}**\n\n${text}\n\n_Responde aquí mismo en el canal (usa \`/practice\` primero si no tienes sesión activa) y te corrijo._`
+        `**Quiz — ${cfg.flag} ${cfg.label}**\n\n${text}\n\n_Responde aquí mismo, corto y numerado (ej: "1. ... 2. ..."). No hace falta que copies la pregunta, ya la tengo en memoria._`
       );
     } catch (err) {
       await interaction.editReply(`⚠️ ${err.message}`);
@@ -98,11 +79,12 @@ export const handlers = {
     const cfg = LANGUAGE_CONFIG[language];
     await interaction.deferReply();
     try {
-      const reply = await replyFromTutor(
-        interaction,
+      const reply = await tutorTurn({
+        userId: interaction.user.id,
+        channelId: interaction.channelId,
         language,
-        `Corrige esta frase en ${cfg.label} siguiendo el formato de corrección de tus reglas: "${text}"`
-      );
+        userText: `Corrige esta frase en ${cfg.label} siguiendo el formato de corrección de tus reglas: "${text}"`,
+      });
       await interaction.editReply(`**Corrección — ${cfg.flag} ${cfg.label}**\n\n${reply}`);
     } catch (err) {
       await interaction.editReply(`⚠️ ${err.message}`);
@@ -116,11 +98,12 @@ export const handlers = {
     startSession(interaction.user.id, interaction.channelId, language);
     await interaction.deferReply();
     try {
-      const intro = await replyFromTutor(
-        interaction,
+      const intro = await tutorTurn({
+        userId: interaction.user.id,
+        channelId: interaction.channelId,
         language,
-        `Vamos a hacer un roleplay en ${cfg.label} sobre: "${scenario}". Ponte en el personaje correspondiente (ej. camarero, entrevistador) y empieza la escena con una línea de diálogo. Espera mi respuesta antes de continuar.`
-      );
+        userText: `Vamos a hacer un roleplay en ${cfg.label} sobre: "${scenario}". Ponte en el personaje correspondiente (ej. camarero, entrevistador) y empieza la escena con una línea de diálogo. Espera mi respuesta antes de continuar.`,
+      });
       await interaction.editReply(
         `**Roleplay iniciado — ${cfg.flag} ${cfg.label}** (escenario: ${scenario})\nResponde en este canal para continuar la escena. Usa \`/stop\` para terminar.\n\n${intro}`
       );
@@ -218,21 +201,13 @@ async function handleSpokenTurn({ interaction, wavBuffer, language }) {
     if (!transcript || transcript.trim().length < 2) return;
 
     await channel.send(`🎙️ **Dijiste:** "${transcript}"`);
-    pushTurn(userId, channel.id, 'user', `[Mensaje hablado, transcrito automáticamente] ${transcript}`);
-
-    const progress = await getUserProgress(userId, language);
-    const system = buildSystemPrompt({
+    const clean = await tutorTurn({
+      userId,
+      channelId: channel.id,
       language,
-      userLevel: progress.level,
-      memorySummary: summarizeForPrompt(progress),
+      userText: `[Mensaje hablado, transcrito automáticamente] ${transcript}`,
       mode: 'voice',
     });
-    const session = getSession(userId, channel.id);
-    const raw = await chat([{ role: 'system', content: system }, ...(session?.history || [])]);
-    const { clean, weakPoint } = stripWeakpoint(raw);
-    pushTurn(userId, channel.id, 'assistant', clean);
-    if (weakPoint) await recordActivity(userId, language, { weakPoint });
-    else await recordActivity(userId, language, {});
 
     const mp3 = await synthesizeSpeech(clean, language).catch((err) => {
       console.error('TTS error en turno hablado:', err);
@@ -248,5 +223,3 @@ async function handleSpokenTurn({ interaction, wavBuffer, language }) {
     await channel.send(`⚠️ ${err.message}`).catch(() => {});
   }
 }
-
-export { replyFromTutor, stripWeakpoint };
